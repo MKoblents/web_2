@@ -7,6 +7,7 @@ const centerY= height/2;
 const R = 3;
 const scale = 110;
 let NUMBER = 0;
+const API_URL = '/fcgi-bin/';
 
 function toCanvasX(x){
     return centerX + x*scale;
@@ -123,6 +124,39 @@ function drawCanvas(R) {
 drawCanvas(R);
 drawAllPoints(R);
 
+async function requestCheck(x,y,r) {
+    const params = new URLSearchParams({x, y, r});
+    const response = await fetch(`${API_URL}?${params}`, {method: 'GET'});
+    let data;
+    try {
+        data = await response.json();
+    } catch {
+        throw new Error(`HTTP ${response.status}`);
+    }
+    if (!response.ok || data.error) {
+        throw new Error(data.error ?? `HTTP ${response.status}`);
+    }
+    return data;
+}
+
+function showResult(data){
+    ctx.clearRect(0,0,width,height);
+    drawCanvas(data.r);
+    drawPoint(data.x, data.y, data.isHit);
+    drawAllPoints(data.r);
+    document.getElementById('results-body').appendChild(createResultRow(data));
+    saveToLocalStorage(data);
+}
+
+async function checkPoint(x,y,r){
+    try {
+        showResult(await requestCheck(x,y,r))
+    } catch (error){
+        console.error('Ошибка запроса:', error);
+        alert(`Ошибка: ${error.message}`);
+    }
+}
+
 async function submitForm(event){
     event.preventDefault();
     clearErrors();
@@ -163,32 +197,7 @@ async function submitForm(event){
         }
         return;
     }
-    const xNum = parseFloat(x);
-    const rNum = parseFloat(r);
-    const queryString = `x=${xNum}&y=${yNum}&r=${rNum}`;
-    const url = `/fcgi-bin/?${queryString}`;
-    try{
-        const  response = await fetch(url, {method:'GET'});
-        if (!response.ok){
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        if (data.error){
-            alert("Server error: ", data.error+"in if in sub");
-            return;
-        }
-        ctx.clearRect(0, 0, width, height);
-        drawCanvas(parseFloat(data.r));
-        drawPoint(parseFloat(data.x), parseFloat(data.y),data.isHit);
-        drawAllPoints(rNum);
-
-        const row =createResultRow(data);
-        document.getElementById('results-body').appendChild(row);
-        saveToLocalStorage(data);
-    }catch (error){
-        console.log("Error while sending:", error);
-        alert("Server error: " + data.error+"in sub");
-    }
+    await checkPoint(parseFloat(x), yNum, parseFloat(r));
 }
 
 function checkHit(x, y, R) {
@@ -285,14 +294,18 @@ function createResultRow(item) {
 function formatTimeToCurrentZone(isoString) {
     const date = new Date(isoString);
     if (isNaN(date)) return isoString;
-    return date.toLocaleString('ru-RU', {
+
+    const datePart = date.toLocaleDateString('ru-RU', {
         year: 'numeric',
         month: '2-digit',
-        day: '2-digit',
+        day: '2-digit'
+    });
+    const timePart = date.toLocaleTimeString('ru-RU', {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit'
     });
+    return `${datePart}\n${timePart}`;
 }
 
 function getZoneKey() {
@@ -316,15 +329,6 @@ function refreshAllTimeDisplays() {
     });
 }
 
-let currentSystemTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-setInterval(() => {
-    const newSystemTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (newSystemTimeZone !== currentSystemTimeZone) {
-        currentSystemTimeZone = newSystemTimeZone;
-        refreshAllTimeDisplays();
-    }
-}, 5000);
 
 document.getElementById('clear-btn').addEventListener('click', () => {
     const tbody = document.getElementById("results-body");
@@ -402,43 +406,21 @@ function getMathCoordinates(event) {
 }
 
 async function addClickedPointToResults(event) {
-    let {x, y} = getMathCoordinates(event);
-    x = x.toFixed(2);
-    y = y.toFixed(2);
-
+    const { x, y } = getMathCoordinates(event);
     let r = getSelectedCheckboxValue('r');
     if (r === null || r === 'multiple') {
         r = '3';
         document.querySelector('input[name="r"][value="3"]').checked = true;
     }
-    const rNum = parseFloat(r);
-    document.querySelectorAll('input[name="x"]').forEach(cb => cb.checked = false);
-    document.getElementById('y-input').value = y.toString().replace('.', ',');
+    document.querySelectorAll('input[name="x"]').forEach((cb) => { cb.checked = false; });
+    document.getElementById('y-input').value = y.toFixed(2).replace('.', ',');
     clearErrors();
-    const queryString = `x=${x}&y=${y}&r=${rNum}`;
-    const url = `/fcgi-bin/?${queryString}`;
-    try {
-        const response = await fetch(url, {method: 'GET'});
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        if (data.error) {
-            alert("Server error: ", data.error +"in if");
-            return;
-        }
-        ctx.clearRect(0, 0, width, height);
-        drawCanvas(parseFloat(data.r));
-        drawPoint(parseFloat(data.x), parseFloat(data.y), data.isHit);
-        drawAllPoints(rNum);
-
-        const row = createResultRow(data);
-        document.getElementById('results-body').appendChild(row);
-        saveToLocalStorage(data);
-    }catch (error){
-        console.log("Error while sending:", error);
-        alert("Server error: " + data.error+"in cl");
+    if (x < -4 || x > 4 || y <= -3 || y >= 5) {
+        showError('y-error', 'Точка вне допустимой области: X от -4 до 4, Y от -3 до 5');
+        return;
+        //TODO
     }
+    await checkPoint(x.toFixed(2), y.toFixed(2), parseFloat(r));
 }
 
 function drawAllPoints(r){
@@ -446,19 +428,19 @@ function drawAllPoints(r){
     const len = points.length;
     if (len===0) return;
     let i = 0
-    const setBg = (n, color) => {
+    const setActive = (n, active) => {
         const tr = document.querySelector(`tr[number="${n}"]`);
-        if (tr) tr.style.backgroundColor = color;
+        if (tr) tr.classList.toggle('row-active', active);
     };
     const intervalID = setInterval(() => {
         if (i < len) {
             const point = points[i];
             drawPoint(point.x, point.y, checkHit(point.x, point.y, r));
-            setBg(i, '#000000');
-            setBg(i - 1, '#ffffff');
+            setActive(i, true);
+            setActive(i - 1, false);
             i++;
         } else {
-            setBg(len - 1, '#ffffff');
+            setActive(len - 1, false);
             clearInterval(intervalID);
         }
     }, 500);

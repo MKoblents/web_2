@@ -123,7 +123,7 @@ function drawCanvas(R) {
 drawCanvas(R);
 drawAllPoints(R);
 
-function submitForm(event){
+async function submitForm(event){
     event.preventDefault();
     clearErrors();
     const x = getSelectedCheckboxValue('x');
@@ -165,22 +165,29 @@ function submitForm(event){
     }
     const xNum = parseFloat(x);
     const rNum = parseFloat(r);
+    const queryString = `x=${xNum}&y=${yNum}&r=${rNum}`;
+    const url = `/fcgi-bin/?${queryString}`;
+    try{
+        const  response = await fetch(url, {method:'GET'});
+        if (!response.ok){
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.error){
+            alert("Server error: ", data.error);
+            return;
+        }
+        ctx.clearRect(0, 0, width, height);
+        drawCanvas(parseFloat(data.r));
+        drawPoint(parseFloat(data.x), parseFloat(data.y),data.isHit);
+        drawAllPoints(rNum);
 
-    const isHit = checkHit(xNum, yNum, rNum);
-    ctx.clearRect(0, 0, width, height);
-    drawCanvas(r);
-    drawPoint(xNum, yNum, isHit);
-    drawAllPoints(rNum);
-    const result = {
-        x: xNum,
-        y: yNum,
-        r: rNum,
-        isHit: isHit,
-        timestamp: new Date().toISOString()
-    };
-    const row =createResultRow(result);
-    document.getElementById('results-body').appendChild(row);
-    saveToLocalStorage(result);
+        const row =createResultRow(data);
+        document.getElementById('results-body').appendChild(row);
+        saveToLocalStorage(data);
+    }catch (error){
+        console.log("Error while sending:", error);
+    }
 }
 
 function checkHit(x, y, R) {
@@ -266,8 +273,7 @@ function createResultRow(item) {
     cellResult.textContent = item.isHit ? 'Попала' : 'Не попала';
     cellResult.className = item.isHit ? 'hit' : 'miss';
     const cellTime = document.createElement('td');
-    cellTime.setAttribute('data-timestamp', item.timestamp);
-    cellTime.textContent = formatTimeToCurrentZone(item.timestamp);
+    cellTime.textContent = item.currentTime;
 
     row.appendChild(cellX);
     row.appendChild(cellY);
@@ -383,8 +389,8 @@ function getMathCoordinates(event) {
     return { x: mathX, y: mathY };
 }
 
-function addClickedPointToResults(event){
-    let { x, y } = getMathCoordinates(event);
+async function addClickedPointToResults(event) {
+    let {x, y} = getMathCoordinates(event);
     x = x.toFixed(2);
     y = y.toFixed(2);
 
@@ -397,23 +403,29 @@ function addClickedPointToResults(event){
     document.querySelectorAll('input[name="x"]').forEach(cb => cb.checked = false);
     document.getElementById('y-input').value = y.toString().replace('.', ',');
     clearErrors();
-    const isHit = checkHit(x, y, rNum);
-    ctx.clearRect(0, 0, width, height);
-    drawCanvas(rNum);
-    drawAllPoints(rNum);
-    drawPoint(x, y, isHit);
-    const result = {
-        x: x,
-        y: y,
-        r: rNum,
-        isHit: isHit,
-        timestamp: new Date().toISOString()
-    };
+    const queryString = `x=${x}&y=${y}&r=${rNum}`;
+    const url = `/fcgi-bin/?${queryString}`;
+    try {
+        const response = await fetch(url, {method: 'GET'});
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.error) {
+            alert("Server error: ", data.error);
+            return;
+        }
+        ctx.clearRect(0, 0, width, height);
+        drawCanvas(parseFloat(data.r));
+        drawPoint(parseFloat(data.x), parseFloat(data.y), data.isHit);
+        drawAllPoints(rNum);
 
-    const row = createResultRow(result);
-
-    document.getElementById('results-body').appendChild(row);
-    saveToLocalStorage(result);
+        const row = createResultRow(data);
+        document.getElementById('results-body').appendChild(row);
+        saveToLocalStorage(data);
+    }catch (error){
+        console.log("Error while sending:", error);
+    }
 }
 
 function drawAllPoints(r){

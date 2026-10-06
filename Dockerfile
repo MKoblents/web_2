@@ -9,4 +9,4 @@ FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=build /app/target/classes ./classes
 COPY lib ./lib
-CMD ["java", "-cp", "classes:lib/fastcgi-lib.jar", "org.example.Main"]
+CMD ["java", "-DFCGI_PORT=9000", "-cp", "classes:lib/fastcgi-lib.jar", "org.example.Main"]

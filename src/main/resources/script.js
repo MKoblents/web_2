@@ -174,7 +174,7 @@ async function submitForm(event){
         }
         const data = await response.json();
         if (data.error){
-            alert("Server error: ", data.error);
+            alert("Server error: ", data.error+"in if in sub");
             return;
         }
         ctx.clearRect(0, 0, width, height);
@@ -187,6 +187,7 @@ async function submitForm(event){
         saveToLocalStorage(data);
     }catch (error){
         console.log("Error while sending:", error);
+        alert("Server error: " + data.error+"in sub");
     }
 }
 
@@ -201,7 +202,7 @@ function getSelectedCheckboxValue(name){
     const checked = document.querySelectorAll(`input[name="${name}"]:checked`);
     if (checked.length === 0) return null;
     if (checked.length>1){
-        return 'multiply';
+        return 'multiple';
     }
     return checked[0].value;
 }
@@ -273,21 +274,18 @@ function createResultRow(item) {
     cellResult.textContent = item.isHit ? 'Попала' : 'Не попала';
     cellResult.className = item.isHit ? 'hit' : 'miss';
     const cellTime = document.createElement('td');
-    cellTime.textContent = item.currentTime;
-
-    row.appendChild(cellX);
-    row.appendChild(cellY);
-    row.appendChild(cellR);
-    row.appendChild(cellResult);
-    row.appendChild(cellTime);
-
+    cellTime.setAttribute('data-timestamp', item.currentTime);
+    cellTime.textContent = formatTimeToCurrentZone(item.currentTime);
+    const cellExec = document.createElement('td');
+    cellExec.textContent = item.executionTime + ' мс';
+    row.append(cellX, cellY, cellR, cellResult, cellTime, cellExec);
     return row;
 }
 
 function formatTimeToCurrentZone(isoString) {
     const date = new Date(isoString);
+    if (isNaN(date)) return isoString;
     return date.toLocaleString('ru-RU', {
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -296,6 +294,19 @@ function formatTimeToCurrentZone(isoString) {
         second: '2-digit'
     });
 }
+
+function getZoneKey() {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone + '|' + new Date().getTimezoneOffset();
+}
+
+let currentZoneKey = getZoneKey();
+setInterval(() => {
+    const newKey = getZoneKey();
+    if (newKey !== currentZoneKey) {
+        currentZoneKey = newKey;
+        refreshAllTimeDisplays();
+    }
+}, 1000);
 
 function refreshAllTimeDisplays() {
     const timeCells = document.querySelectorAll('td[data-timestamp]');
@@ -324,6 +335,7 @@ document.getElementById('clear-btn').addEventListener('click', () => {
     if (confirm('Вы уверены, что хотите удалить все результаты?')) {
         localStorage.removeItem('pointResults');
         document.getElementById('results-body').innerHTML = '';
+        NUMBER = 0;
     }
 });
 
@@ -412,7 +424,7 @@ async function addClickedPointToResults(event) {
         }
         const data = await response.json();
         if (data.error) {
-            alert("Server error: ", data.error);
+            alert("Server error: ", data.error +"in if");
             return;
         }
         ctx.clearRect(0, 0, width, height);
@@ -425,6 +437,7 @@ async function addClickedPointToResults(event) {
         saveToLocalStorage(data);
     }catch (error){
         console.log("Error while sending:", error);
+        alert("Server error: " + data.error+"in cl");
     }
 }
 
@@ -433,23 +446,21 @@ function drawAllPoints(r){
     const len = points.length;
     if (len===0) return;
     let i = 0
-    const intervalID=setInterval(()=>{
-        if (i<len) {
-            let point = points[i];
-            let x = point.x;
-            let y = point.y
-
-            let isHit = checkHit(x, y, r);
-            drawPoint(x, y, isHit);
-            document.querySelector(`tr[number~="${i}"]`).style.backgroundColor = '#000000';
-            i++
-            document.querySelector(`tr[number~="${i-2}"]`).style.backgroundColor = '#ffffff';
-        }else {
-            document.querySelector(`tr[number~="${i-1}"]`).style.backgroundColor = '#ffffff';
-
+    const setBg = (n, color) => {
+        const tr = document.querySelector(`tr[number="${n}"]`);
+        if (tr) tr.style.backgroundColor = color;
+    };
+    const intervalID = setInterval(() => {
+        if (i < len) {
+            const point = points[i];
+            drawPoint(point.x, point.y, checkHit(point.x, point.y, r));
+            setBg(i, '#000000');
+            setBg(i - 1, '#ffffff');
+            i++;
+        } else {
+            setBg(len - 1, '#ffffff');
             clearInterval(intervalID);
         }
-
-    },500);
+    }, 500);
 }
 canvas.addEventListener('click', addClickedPointToResults);

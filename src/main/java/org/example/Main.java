@@ -6,7 +6,9 @@ import com.fastcgi.FCGIRequest;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -39,7 +41,7 @@ public class Main {
             double ms = (endTime - startTime) / 1_000_000.0;
             String response = String.format(Locale.US,
                     "{\"x\": %.2f, \"y\": %.2f, \"r\": %.2f, \"isHit\": %b, \"executionTime\": %.3f, \"currentTime\": \"%s\"}",
-                    x, y, R, isHit, ms, LocalDateTime.now()
+                    x, y, R, isHit, ms, Instant.now().truncatedTo(ChronoUnit.MILLIS)
             );
             sendResponse(fcgiRequest, response);
 
@@ -81,8 +83,7 @@ public class Main {
                     || Double.isInfinite(y) || Double.isNaN(r) || Double.isInfinite(r)) {
                 return "Invalid number";
             }
-            if (!java.util.List.of(-4.0,-3.0,-2.0,-1.0,0.0,1.0,2.0,3.0,4.0).contains(x))
-                return "x must be an integer from -4 to 4";
+            if (x < -4 || x > 4) return "x must be in [-4; 4]";
             if (y <= -3 || y >= 5) return "y must be in (-3; 5)";
             if (!java.util.List.of(1.0,1.5,2.0,2.5,3.0).contains(r))
                 return "r must be one of 1, 1.5, 2, 2.5, 3";

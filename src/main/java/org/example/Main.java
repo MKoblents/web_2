@@ -8,10 +8,11 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class Main {
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args){
         FCGIInterface fcgiInterface = new FCGIInterface();
 
         while (fcgiInterface.FCGIaccept()>=0){
@@ -27,9 +28,7 @@ public class Main {
             Map<String, String> params = parseQueryString(queryString);
             String validationErr = validateParams(params);
             if (validationErr != null){
-                fcgiRequest.outStream.write("Content-Type: application/json; charset=UTF-8\r\n\r\n".getBytes(StandardCharsets.UTF_8));
-                fcgiRequest.outStream.write(("{\"error\": \"" + validationErr + "\"}").getBytes(StandardCharsets.UTF_8));
-                fcgiRequest.outStream.flush();
+                sendResponse(fcgiRequest, "{\"error\": \"" + validationErr + "\"}");
                 continue;
             }
             double x = Double.parseDouble(params.get("x"));
@@ -37,15 +36,22 @@ public class Main {
             double R = Double.parseDouble(params.get("r"));
             boolean isHit = checkHit(x,y,R);
             long endTime = System.nanoTime();
-            double sec = (endTime-startTime)/1_000_000.0;
-            byte[] res = String.format(
+            double ms = (endTime - startTime) / 1_000_000.0;
+            String response = String.format(Locale.US,
                     "{\"x\": %.2f, \"y\": %.2f, \"r\": %.2f, \"isHit\": %b, \"executionTime\": %.3f, \"currentTime\": \"%s\"}",
-                    x, y, R, isHit, sec, LocalDateTime.now()
-            ).getBytes(StandardCharsets.UTF_8);
-            fcgiRequest.outStream.write("Content-Type: application/json; charset=UTF-8\r\n\r\n".getBytes(StandardCharsets.UTF_8));
-            fcgiRequest.outStream.write(res);
-            fcgiRequest.outStream.flush();
+                    x, y, R, isHit, ms, LocalDateTime.now()
+            );
+            sendResponse(fcgiRequest, response);
 
+        }
+    }
+    private static void sendResponse(FCGIRequest fcgiRequest, String response){
+        try {
+            fcgiRequest.outStream.write("Content-Type: application/json; charset=UTF-8\r\n\r\n".getBytes(StandardCharsets.UTF_8));
+            fcgiRequest.outStream.write(response.getBytes(StandardCharsets.UTF_8));
+            fcgiRequest.outStream.flush();
+        }catch (IOException e){
+            //TODO
         }
     }
     private static HashMap<String, String> parseQueryString(String queryString){
@@ -63,32 +69,32 @@ public class Main {
         return res;
     }
 
-    private static String validateParams(Map<String, String> params){
-        if (!params.containsKey("x")){
-            return "Missing parameter: x.";
-        }
-        if (!params.containsKey("y")){
-            return "Missing parameter: y.";
-        }
-        if (!params.containsKey("r")){
-            return "Missing parameter: r.";
+    private static String validateParams(Map<String, String> params) {
+        for (String k : new String[]{"x", "y", "r"}) {
+            if (!params.containsKey(k)) return "Missing parameter: " + k;
         }
         try {
             double x = Double.parseDouble(params.get("x"));
             double y = Double.parseDouble(params.get("y"));
             double r = Double.parseDouble(params.get("r"));
-            if (r<=0){
-                return "Invalid r: must be grater than 0.";
+            if (Double.isNaN(x) || Double.isInfinite(x) || Double.isNaN(y)
+                    || Double.isInfinite(y) || Double.isNaN(r) || Double.isInfinite(r)) {
+                return "Invalid number";
             }
-        }catch (NumberFormatException e){
+            if (!java.util.List.of(-4.0,-3.0,-2.0,-1.0,0.0,1.0,2.0,3.0,4.0).contains(x))
+                return "x must be an integer from -4 to 4";
+            if (y <= -3 || y >= 5) return "y must be in (-3; 5)";
+            if (!java.util.List.of(1.0,1.5,2.0,2.5,3.0).contains(r))
+                return "r must be one of 1, 1.5, 2, 2.5, 3";
+        } catch (NumberFormatException e) {
             return "Invalid number format";
         }
         return null;
     }
     private static boolean checkHit(double x, double y, double R) {
-    boolean inRectangle = (x >= 0 && x <= R) && (y >= 0 && y <= R / 2);
-    boolean inTriangle = (x >= -R && x <= 0) && (y >= 0) && (y <= x / 2 + R / 2);
-    boolean inCircle = (x <= 0 && y <= 0) && (x * x + y * y <= (R / 2) * (R / 2));
+        boolean inRectangle = (x >= 0 && x <= R) && (y >= 0 && y <= R / 2);
+        boolean inTriangle = (x >= -R && x <= 0) && (y >= 0) && (y <= x / 2 + R / 2);
+        boolean inCircle = (x <= 0 && y <= 0) && (x * x + y * y <= (R / 2) * (R / 2));
         return inRectangle || inCircle || inTriangle;
     }
 }

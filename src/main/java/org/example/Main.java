@@ -16,6 +16,12 @@ public class Main {
 
         while (fcgiInterface.FCGIaccept()>=0){
             FCGIRequest fcgiRequest = FCGIInterface.request;
+            if (fcgiRequest == null) {
+                System.err.println("CRITICAL ERROR: FCGIInterface.request is null after FCGIaccept()!");
+                //TODO
+                continue;
+            }
+
             long startTime = System.nanoTime();
             String queryString = fcgiRequest.params.getProperty("QUERY_STRING");
             Map<String, String> params = parseQueryString(queryString);

@@ -5,6 +5,8 @@ services:
     build: .
     container_name: fastcgi-server
     restart: always
+    ports:
+      - "9000:9000"
 
   web:
     image: httpd:2.4

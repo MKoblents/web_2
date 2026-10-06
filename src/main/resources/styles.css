@@ -258,3 +258,8 @@ input[type="text"]:focus {
 .table-wrapper::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
 .table-wrapper::-webkit-scrollbar-thumb { background: #3498db; border-radius: 4px; }
 .table-wrapper::-webkit-scrollbar-thumb:hover { background: #2980b9; }
+
+.results-table tr.row-active { background-color: #000; color: yellow; }
+td[data-timestamp] {
+    white-space: pre-line;
+}

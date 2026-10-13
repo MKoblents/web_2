@@ -21,10 +21,10 @@ function drawCanvas(R) {
     const color = 'rgba(52,152,219,0.7)'
     ctx.fillStyle = color;
     ctx.fillRect(
-        toCanvasX(0),
-        toCanvasY(R/2),
+        toCanvasX(-R),
+        toCanvasY(0),
         R * scale,
-        R/2 * scale
+        R * scale
     );
 
     ctx.beginPath();
@@ -37,15 +37,15 @@ function drawCanvas(R) {
 
     ctx.beginPath();
     ctx.moveTo(toCanvasX(0), toCanvasY(0));
-    ctx.lineTo(toCanvasX(- R / 2), toCanvasY(0));
+    ctx.lineTo(toCanvasX(R), toCanvasY(0));
     ctx.arc(
         toCanvasX(0),
         toCanvasY(0),
-        (R / 2) * scale,
-        Math.PI,
-        Math.PI / 2,
+        R * scale,
+        0,
+        -Math.PI / 2,
         true
-    )
+    );
     ctx.closePath();
     ctx.fillStyle = color;
     ctx.fill();

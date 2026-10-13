@@ -124,23 +124,22 @@ function drawCanvas(R) {
 drawCanvas(R);
 drawAllPoints(R);
 
-    async function requestCheck(x, y, r) {
-        const params = new URLSearchParams({x, y, r});
-        const response = await fetch(`${API_URL}?${params}`, {method: 'GET'});
-        const rawText = await response.text();
-        let data;
-        try {
-            data = JSON.parse(rawText);
-        } catch (e) {
-            throw new Error(`Сервер вернул некорректные данные. Статус: ${response.status}. Ответ: ${rawText}`);
-        }
-
-        if (!response.ok || (data && data.error)) {
-            throw new Error(data.error ?? `HTTP ошибка: ${response.status}`);
-        }
-        console.log(1+data);
-        return data;
+async function requestCheck(x, y, r) {
+    const params = new URLSearchParams({x, y, r});
+    const response = await fetch(`${API_URL}?${params}`, {method: 'GET'});
+    const rawText = await response.text();
+    let data;
+    try {
+        data = JSON.parse(rawText);
+    } catch (e) {
+        throw new Error(`Сервер вернул некорректные данные. Статус: ${response.status}. Ответ: ${rawText}`);
     }
+
+    if (!response.ok || (data && data.error)) {
+        throw new Error(data.error ?? `HTTP ошибка: ${response.status}`);
+    }
+    return data;
+}
 
 function showResult(data){
     ctx.clearRect(0,0,width,height);
@@ -214,14 +213,14 @@ function checkHit(x, y, R) {
     return inRectangle || inCircle || inTriangle;
 }
 
-function getSelectedCheckboxValue(name){
-    const checked = document.querySelectorAll(`input[name="${name}"]:checked`);
-    if (checked.length === 0) return null;
-    if (checked.length>1){
-        return 'multiple';
-    }
-    return checked[0].value;
-}
+// function getSelectedCheckboxValue(name){
+//     const checked = document.querySelectorAll(`input[name="${name}"]:checked`);
+//     if (checked.length === 0) return null;
+//     if (checked.length>1){
+//         return 'multiple';
+//     }
+//     return checked[0].value;
+// }
 
 function showError(elementId, message){
     const errorElement = document.getElementById(elementId);
@@ -279,7 +278,7 @@ function loadFromLocalStorage(){
 function createResultRow(item) {
     let n = NUMBER++;
     const row = document.createElement('tr');
-    row.setAttribute('number', n);
+    row.setAttribute('number', n.toString());
     const cellX = document.createElement('td');
     cellX.textContent = item.x;
     const cellY = document.createElement('td');
@@ -300,7 +299,7 @@ function createResultRow(item) {
 
 function formatTimeToCurrentZone(isoString) {
     const date = new Date(isoString);
-    if (isNaN(date)) return isoString;
+    if (isNaN(date.getDate())) return isoString;
 
     const datePart = date.toLocaleDateString('ru-RU', {
         year: 'numeric',

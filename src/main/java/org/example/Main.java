@@ -2,12 +2,10 @@ package org.example;
 
 import com.fastcgi.FCGIInterface;
 import com.fastcgi.FCGIRequest;
-
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Locale;
@@ -19,9 +17,7 @@ public class Main {
 
         while (fcgiInterface.FCGIaccept()>=0){
             FCGIRequest fcgiRequest = FCGIInterface.request;
-            if (fcgiRequest == null) {
-                System.err.println("CRITICAL ERROR: FCGIInterface.request is null after FCGIaccept()!");
-                //TODO
+            if (fcgiRequest == null || fcgiRequest.params == null || fcgiRequest.outStream == null) {
                 continue;
             }
 
@@ -49,20 +45,17 @@ public class Main {
     }
     private static void sendResponse(FCGIRequest fcgiRequest, String response){
         try {
-            fcgiRequest.outStream.write("Content-Type: application/json; charset=UTF-8\r\n\r\n".getBytes(StandardCharsets.UTF_8));
-            fcgiRequest.outStream.write(response.getBytes(StandardCharsets.UTF_8));
+            String fullResponse = "Content-Type: application/json; charset=UTF-8\r\n\r\n" + response;
+            fcgiRequest.outStream.write(fullResponse.getBytes(StandardCharsets.UTF_8));
             fcgiRequest.outStream.flush();
-        }catch (IOException e){
-            //TODO
+        } catch (IOException e) {
+            System.err.println("[ERROR] Ошибка записи: " + e.getMessage());
         }
     }
     private static HashMap<String, String> parseQueryString(String queryString){
         HashMap<String, String> res = new HashMap<>();
-        if (queryString == null || queryString.isEmpty()){
-            return res;
-        }
-        String[] pairs = queryString.split("&");
-        for (String pair: pairs){
+        if (queryString == null || queryString.isEmpty()) return res;
+        for (String pair : queryString.split("&")) {
             String[] p = pair.split("=", 2);
             String key = URLDecoder.decode(p[0], StandardCharsets.UTF_8);
             String value = p.length > 1 ? URLDecoder.decode(p[1], StandardCharsets.UTF_8) : "";
@@ -79,14 +72,12 @@ public class Main {
             double x = Double.parseDouble(params.get("x"));
             double y = Double.parseDouble(params.get("y"));
             double r = Double.parseDouble(params.get("r"));
-            if (Double.isNaN(x) || Double.isInfinite(x) || Double.isNaN(y)
-                    || Double.isInfinite(y) || Double.isNaN(r) || Double.isInfinite(r)) {
-                return "Invalid number";
-            }
+
             if (x < -4 || x > 4) return "x must be in [-4; 4]";
-            if (y <= -3 || y >= 3) return "y must be in (-3; 3)";
-            if (!java.util.List.of(1.0,1.5,2.0,2.5,3.0).contains(r))
+            if (y < -3 || y > 3) return "y must be in [-3; 3]";
+            if (!java.util.List.of(1.0, 1.5, 2.0, 2.5, 3.0).contains(r)) {
                 return "r must be one of 1, 1.5, 2, 2.5, 3";
+            }
         } catch (NumberFormatException e) {
             return "Invalid number format";
         }

@@ -263,3 +263,46 @@ input[type="text"]:focus {
 td[data-timestamp] {
     white-space: pre-line;
 }
+
+.radio-input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1%;
+    margin-top: 1%;
+}
+
+.radio-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    padding: 8px 12px;
+    border: 2px solid #3498db;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #3498db;
+    background-color: transparent;
+    transition: all 0.2s ease-in-out;
+    user-select: none;
+}
+
+.radio-label:hover {
+    background-color: #ebf5fb;
+    transform: translateY(-1px);
+}
+
+.radio-input:checked + .radio-label {
+    background-color: #3498db;
+    color: #ffffff;
+    box-shadow: 0 4px 6px rgba(52, 152, 219, 0.3);
+    border-color: #2980b9;
+}

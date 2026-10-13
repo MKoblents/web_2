@@ -124,20 +124,23 @@ function drawCanvas(R) {
 drawCanvas(R);
 drawAllPoints(R);
 
-async function requestCheck(x,y,r) {
-    const params = new URLSearchParams({x, y, r});
-    const response = await fetch(`${API_URL}?${params}`, {method: 'GET'});
-    let data;
-    try {
-        data = await response.json();
-    } catch {
-        throw new Error(`HTTP ${response.status}`);
+    async function requestCheck(x, y, r) {
+        const params = new URLSearchParams({x, y, r});
+        const response = await fetch(`${API_URL}?${params}`, {method: 'GET'});
+        const rawText = await response.text();
+        let data;
+        try {
+            data = JSON.parse(rawText);
+        } catch (e) {
+            throw new Error(`Сервер вернул некорректные данные. Статус: ${response.status}. Ответ: ${rawText}`);
+        }
+
+        if (!response.ok || (data && data.error)) {
+            throw new Error(data.error ?? `HTTP ошибка: ${response.status}`);
+        }
+        console.log(1+data);
+        return data;
     }
-    if (!response.ok || data.error) {
-        throw new Error(data.error ?? `HTTP ${response.status}`);
-    }
-    return data;
-}
 
 function showResult(data){
     ctx.clearRect(0,0,width,height);
@@ -160,9 +163,9 @@ async function checkPoint(x,y,r){
 async function submitForm(event){
     event.preventDefault();
     clearErrors();
-    const x = getSelectedCheckboxValue('x');
+    const x = getRadioValue('x');
     const y = document.getElementById('y-input').value.trim();
-    const r = getSelectedCheckboxValue('r');
+    const r = getRadioValue('r');
 
     const error_map = new Map();
 
@@ -198,6 +201,10 @@ async function submitForm(event){
         return;
     }
     await checkPoint(parseFloat(x), yNum, parseFloat(r));
+}
+function getRadioValue(name) {
+    const selected = document.querySelector(`input[name="${name}"]:checked`);
+    return selected ? selected.value : null;
 }
 
 function checkHit(x, y, R) {
@@ -407,7 +414,7 @@ function getMathCoordinates(event) {
 
 async function addClickedPointToResults(event) {
     const { x, y } = getMathCoordinates(event);
-    let r = getSelectedCheckboxValue('r');
+    let r = getRadioValue('r');
     if (r === null || r === 'multiple') {
         r = '3';
         document.querySelector('input[name="r"][value="3"]').checked = true;
@@ -446,3 +453,13 @@ function drawAllPoints(r){
     }, 500);
 }
 canvas.addEventListener('click', addClickedPointToResults);
+document.querySelectorAll('input[name="r"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        if (this.checked) {
+            const newR = parseFloat(this.value);
+            ctx.clearRect(0, 0, width, height);
+            drawCanvas(newR);
+            drawAllPoints(newR);
+        }
+    });
+});

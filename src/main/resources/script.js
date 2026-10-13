@@ -181,8 +181,8 @@ async function submitForm(event){
     }
 
     const yNum = parseFloat(y.replace(',', '.'));
-    if (yNum < -3 || yNum > 5) {
-        error_map.set('y-error', 'Y должен быть от -3 до 5');
+    if (yNum < -3 || yNum > 3) {
+        error_map.set('y-error', 'Y должен быть от -3 до 3');
     }
 
     if (r === null) {

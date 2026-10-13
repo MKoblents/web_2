@@ -84,7 +84,7 @@ public class Main {
                 return "Invalid number";
             }
             if (x < -4 || x > 4) return "x must be in [-4; 4]";
-            if (y <= -3 || y >= 5) return "y must be in (-3; 5)";
+            if (y <= -3 || y >= 3) return "y must be in (-3; 3)";
             if (!java.util.List.of(1.0,1.5,2.0,2.5,3.0).contains(r))
                 return "r must be one of 1, 1.5, 2, 2.5, 3";
         } catch (NumberFormatException e) {

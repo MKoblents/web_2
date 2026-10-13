@@ -93,9 +93,9 @@ public class Main {
         return null;
     }
     private static boolean checkHit(double x, double y, double R) {
-        boolean inRectangle = (x >= 0 && x <= R) && (y >= 0 && y <= R / 2);
+        boolean inRectangle = (x >= -R && x <= 0) && (y >= -R && y <= 0);
         boolean inTriangle = (x >= -R && x <= 0) && (y >= 0) && (y <= x / 2 + R / 2);
-        boolean inCircle = (x <= 0 && y <= 0) && (x * x + y * y <= (R / 2) * (R / 2));
+        boolean inCircle = (x >= 0 && x <= R) && (y >= 0 && y <= R) && (x * x + y * y <= R * R);
         return inRectangle || inCircle || inTriangle;
     }
 }

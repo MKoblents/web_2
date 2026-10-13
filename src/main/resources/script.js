@@ -201,9 +201,9 @@ async function submitForm(event){
 }
 
 function checkHit(x, y, R) {
-    const inRectangle = (x >= 0 && x <= R) && (y >= 0 && y <= R / 2);
+    const inRectangle = (x >= -R && x <= 0) && (y >= -R && y <= 0);
     const inTriangle = (x >= -R && x <= 0) && (y >= 0) && (y <= x / 2 + R / 2);
-    const inCircle = (x <= 0 && y <= 0) && (x * x + y * y <= (R / 2) * (R / 2));
+    const inCircle = (x >= 0 && x <= R) && (y >= 0 && y <= R) && (x * x + y * y <= R * R);
     return inRectangle || inCircle || inTriangle;
 }
 

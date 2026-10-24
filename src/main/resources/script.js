@@ -421,10 +421,14 @@ async function addClickedPointToResults(event) {
     document.querySelectorAll('input[name="x"]').forEach((cb) => { cb.checked = false; });
     document.getElementById('y-input').value = y.toFixed(2).replace('.', ',');
     clearErrors();
-    if (x < -4 || x > 4 || y <= -3 || y >= 5) {
-        showError('y-error', 'Точка вне допустимой области: X от -4 до 4, Y от -3 до 5');
+    if (x < -5 || x > 3 || y <= -3 || y >= 3) {
+        if (y <= -3 || y >= 3) {
+            showError('y-error', 'Точка вне допустимой области: Y от -3 до 3');
+        }
+        if (x < -5 || x > 3){
+            showError('x-error', 'Точка вне допустимой области: X от -5 до 3');
+        }
         return;
-        //TODO
     }
     await checkPoint(x.toFixed(2), y.toFixed(2), parseFloat(r));
 }

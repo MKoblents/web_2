@@ -7,9 +7,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 public class Main {
     public static void main(String[] args){
@@ -28,8 +26,8 @@ public class Main {
             long startTime = System.nanoTime();
             String queryString = fcgiRequest.params.getProperty("QUERY_STRING");
             Map<String, String> params = parseQueryString(queryString);
-            String validationErr = validateParams(params);
-            if (validationErr != null){
+            List<String> validationErr = validateParams(params);
+            if (!validationErr.isEmpty()){
                 sendResponse(fcgiRequest, "{\"error\": \"" + validationErr + "\"}");
                 continue;
             }
@@ -69,24 +67,25 @@ public class Main {
         return res;
     }
 
-    private static String validateParams(Map<String, String> params) {
+    private static List<String> validateParams(Map<String, String> params) {
+        List<String> res = new ArrayList<>();
         for (String k : new String[]{"x", "y", "r"}) {
-            if (!params.containsKey(k)) return "Missing parameter: " + k;
+            if (!params.containsKey(k)) res.add("Missing parameter: " + k);
         }
         try {
             double x = Double.parseDouble(params.get("x"));
             double y = Double.parseDouble(params.get("y"));
             double r = Double.parseDouble(params.get("r"));
 
-            if (x < -4 || x > 4) return "x must be in [-4; 4]";
-            if (y < -3 || y > 3) return "y must be in [-3; 3]";
+            if (x < -4 || x > 4) res.add("x must be in [-4; 4]");
+            if (y < -3 || y > 3) res.add("y must be in [-3; 3]");
             if (!java.util.List.of(1.0, 1.5, 2.0, 2.5, 3.0).contains(r)) {
-                return "r must be one of 1, 1.5, 2, 2.5, 3";
+                res.add("r must be one of 1, 1.5, 2, 2.5, 3");
             }
         } catch (NumberFormatException e) {
-            return "Invalid number format";
+            res.add("Invalid number format");
         }
-        return null;
+        return res;
     }
     private static boolean checkHit(double x, double y, double R) {
         boolean inRectangle = (x >= -R && x <= 0) && (y >= -R && y <= 0);

@@ -20,7 +20,11 @@ public class Main {
             if (fcgiRequest == null || fcgiRequest.params == null || fcgiRequest.outStream == null) {
                 continue;
             }
-
+//            System.err.println(fcgiRequest.params);
+//            System.err.println(fcgiRequest.params.stringPropertyNames());
+//            System.err.println("before");
+//            System.err.println(fcgiRequest.params.getProperty("SERVER_SIGNATURE"));
+//            System.err.println("after");
             long startTime = System.nanoTime();
             String queryString = fcgiRequest.params.getProperty("QUERY_STRING");
             Map<String, String> params = parseQueryString(queryString);
@@ -56,6 +60,7 @@ public class Main {
         HashMap<String, String> res = new HashMap<>();
         if (queryString == null || queryString.isEmpty()) return res;
         for (String pair : queryString.split("&")) {
+            if (pair.isEmpty()) continue;
             String[] p = pair.split("=", 2);
             String key = URLDecoder.decode(p[0], StandardCharsets.UTF_8);
             String value = p.length > 1 ? URLDecoder.decode(p[1], StandardCharsets.UTF_8) : "";

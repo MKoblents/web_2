@@ -2,6 +2,9 @@ package org.example;
 
 import com.fastcgi.FCGIInterface;
 import com.fastcgi.FCGIRequest;
+import org.example.validation.ValidationResult;
+import org.example.validation.Validator;
+
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -12,6 +15,7 @@ import java.util.*;
 public class Main {
     public static void main(String[] args){
         FCGIInterface fcgiInterface = new FCGIInterface();
+        Validator validator = new Validator(-4, 4, -3, 3, Set.of(1.0, 1.5, 2.0, 2.5, 3.0));
 
         while (fcgiInterface.FCGIaccept()>=0){
             FCGIRequest fcgiRequest = FCGIInterface.request;
@@ -26,9 +30,9 @@ public class Main {
             long startTime = System.nanoTime();
             String queryString = fcgiRequest.params.getProperty("QUERY_STRING");
             Map<String, String> params = parseQueryString(queryString);
-            List<String> validationErr = validateParams(params);
-            if (!validationErr.isEmpty()){
-                sendResponse(fcgiRequest, "{\"error\": \"" + validationErr + "\"}");
+            ValidationResult validationResult = validator.validate(params);
+            if (!validationResult.isValid()){
+                sendResponse(fcgiRequest, "400 Bad Request", errorJson(validationResult.errors()));
                 continue;
             }
             double x = Double.parseDouble(params.get("x"));
@@ -41,15 +45,16 @@ public class Main {
                     "{\"x\": %.2f, \"y\": %.2f, \"r\": %.2f, \"isHit\": %b, \"executionTime\": %.3f, \"currentTime\": \"%s\"}",
                     x, y, R, isHit, ms, Instant.now().truncatedTo(ChronoUnit.MILLIS)
             );
-            sendResponse(fcgiRequest, response);
+            sendResponse(fcgiRequest,"200 OK", response);
 
         }
     }
-    private static void sendResponse(FCGIRequest fcgiRequest, String response){
+    private static void sendResponse(FCGIRequest req, String status, String body) {
         try {
-            String fullResponse = "Content-Type: application/json; charset=UTF-8\r\n\r\n" + response;
-            fcgiRequest.outStream.write(fullResponse.getBytes(StandardCharsets.UTF_8));
-            fcgiRequest.outStream.flush();
+            String full = "Status: " + status + "\r\n"
+                    + "Content-Type: application/json; charset=UTF-8\r\n\r\n" + body;
+            req.outStream.write(full.getBytes(StandardCharsets.UTF_8));
+            req.outStream.flush();
         } catch (IOException e) {
             System.err.println("[ERROR] Ошибка записи: " + e.getMessage());
         }
@@ -92,5 +97,13 @@ public class Main {
         boolean inTriangle = (x >= -R && x <= 0) && (y >= 0) && (y <= x / 2 + R / 2);
         boolean inCircle = (x >= 0 && x <= R) && (y >= 0 && y <= R) && (x * x + y * y <= R * R);
         return inRectangle || inCircle || inTriangle;
+    }
+    private static String errorJson(List<String> errors) {
+        StringBuilder sb = new StringBuilder("{\"errors\": [");
+        for (int i = 0; i < errors.size(); i++) {
+            if (i > 0) sb.append(", ");
+            sb.append('"').append(errors.get(i).replace("\\", "\\\\").replace("\"", "\\\"")).append('"');
+        }
+        return sb.append("]}").toString();
     }
 }

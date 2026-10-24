@@ -3,6 +3,7 @@ package org.example;
 import com.fastcgi.FCGIInterface;
 import com.fastcgi.FCGIRequest;
 import org.example.http.QueryParser;
+import org.example.http.ResponseWriter;
 import org.example.validation.ValidationResult;
 import org.example.validation.Validator;
 
@@ -33,7 +34,7 @@ public class Main {
             Map<String, String> params = QueryParser.parse(queryString);
             ValidationResult validationResult = validator.validate(params);
             if (!validationResult.isValid()){
-                sendResponse(fcgiRequest, "400 Bad Request", errorJson(validationResult.errors()));
+                ResponseWriter.sendResponse(fcgiRequest, "400 Bad Request", errorJson(validationResult.errors()));
                 continue;
             }
             double x = Double.parseDouble(params.get("x"));
@@ -46,18 +47,8 @@ public class Main {
                     "{\"x\": %.2f, \"y\": %.2f, \"r\": %.2f, \"isHit\": %b, \"executionTime\": %.3f, \"currentTime\": \"%s\"}",
                     x, y, R, isHit, ms, Instant.now().truncatedTo(ChronoUnit.MILLIS)
             );
-            sendResponse(fcgiRequest,"200 OK", response);
+            ResponseWriter.sendResponse(fcgiRequest,"200 OK", response);
 
-        }
-    }
-    private static void sendResponse(FCGIRequest req, String status, String body) {
-        try {
-            String full = "Status: " + status + "\r\n"
-                    + "Content-Type: application/json; charset=UTF-8\r\n\r\n" + body;
-            req.outStream.write(full.getBytes(StandardCharsets.UTF_8));
-            req.outStream.flush();
-        } catch (IOException e) {
-            System.err.println("[ERROR] Ошибка записи: " + e.getMessage());
         }
     }
 

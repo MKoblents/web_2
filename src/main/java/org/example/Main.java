@@ -5,15 +5,11 @@ import com.fastcgi.FCGIRequest;
 import org.example.http.JsonBuilder;
 import org.example.http.QueryParser;
 import org.example.http.ResponseWriter;
+import org.example.logic.AreaChecker;
 import org.example.models.Point;
 import org.example.validation.ValidationResult;
 import org.example.validation.Validator;
 
-import java.io.IOException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 public class Main {
@@ -42,21 +38,15 @@ public class Main {
             double x = Double.parseDouble(params.get("x"));
             double y = Double.parseDouble(params.get("y"));
             double R = Double.parseDouble(params.get("r"));
-            boolean isHit = checkHit(x,y,R);
+            Point p = new Point(x,y,R);
+            boolean isHit = AreaChecker.isHit(p);
             long endTime = System.nanoTime();
             double ms = (endTime - startTime) / 1_000_000.0;
-            Point p = new Point(x,y,R);
             String response = JsonBuilder.result(p,isHit,ms);
             ResponseWriter.sendResponse(fcgiRequest,"200 OK", response);
 
         }
     }
 
-    private static boolean checkHit(double x, double y, double R) {
-        boolean inRectangle = (x >= -R && x <= 0) && (y >= -R && y <= 0);
-        boolean inTriangle = (x >= -R && x <= 0) && (y >= 0) && (y <= x / 2 + R / 2);
-        boolean inCircle = (x >= 0 && x <= R) && (y >= 0 && y <= R) && (x * x + y * y <= R * R);
-        return inRectangle || inCircle || inTriangle;
-    }
 
 }

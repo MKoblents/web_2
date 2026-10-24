@@ -2,8 +2,10 @@ package org.example;
 
 import com.fastcgi.FCGIInterface;
 import com.fastcgi.FCGIRequest;
+import org.example.http.JsonBuilder;
 import org.example.http.QueryParser;
 import org.example.http.ResponseWriter;
+import org.example.models.Point;
 import org.example.validation.ValidationResult;
 import org.example.validation.Validator;
 
@@ -34,7 +36,7 @@ public class Main {
             Map<String, String> params = QueryParser.parse(queryString);
             ValidationResult validationResult = validator.validate(params);
             if (!validationResult.isValid()){
-                ResponseWriter.sendResponse(fcgiRequest, "400 Bad Request", errorJson(validationResult.errors()));
+                ResponseWriter.sendResponse(fcgiRequest, "400 Bad Request", JsonBuilder.errors(validationResult.errors()));
                 continue;
             }
             double x = Double.parseDouble(params.get("x"));
@@ -43,10 +45,8 @@ public class Main {
             boolean isHit = checkHit(x,y,R);
             long endTime = System.nanoTime();
             double ms = (endTime - startTime) / 1_000_000.0;
-            String response = String.format(Locale.US,
-                    "{\"x\": %.2f, \"y\": %.2f, \"r\": %.2f, \"isHit\": %b, \"executionTime\": %.3f, \"currentTime\": \"%s\"}",
-                    x, y, R, isHit, ms, Instant.now().truncatedTo(ChronoUnit.MILLIS)
-            );
+            Point p = new Point(x,y,R);
+            String response = JsonBuilder.result(p,isHit,ms);
             ResponseWriter.sendResponse(fcgiRequest,"200 OK", response);
 
         }
@@ -58,12 +58,5 @@ public class Main {
         boolean inCircle = (x >= 0 && x <= R) && (y >= 0 && y <= R) && (x * x + y * y <= R * R);
         return inRectangle || inCircle || inTriangle;
     }
-    private static String errorJson(List<String> errors) {
-        StringBuilder sb = new StringBuilder("{\"errors\": [");
-        for (int i = 0; i < errors.size(); i++) {
-            if (i > 0) sb.append(", ");
-            sb.append('"').append(errors.get(i).replace("\\", "\\\\").replace("\"", "\\\"")).append('"');
-        }
-        return sb.append("]}").toString();
-    }
+
 }

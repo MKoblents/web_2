@@ -2,6 +2,7 @@ package org.example;
 
 import com.fastcgi.FCGIInterface;
 import com.fastcgi.FCGIRequest;
+import org.example.http.QueryParser;
 import org.example.validation.ValidationResult;
 import org.example.validation.Validator;
 
@@ -29,7 +30,7 @@ public class Main {
 //            System.err.println("after");
             long startTime = System.nanoTime();
             String queryString = fcgiRequest.params.getProperty("QUERY_STRING");
-            Map<String, String> params = parseQueryString(queryString);
+            Map<String, String> params = QueryParser.parse(queryString);
             ValidationResult validationResult = validator.validate(params);
             if (!validationResult.isValid()){
                 sendResponse(fcgiRequest, "400 Bad Request", errorJson(validationResult.errors()));
@@ -59,39 +60,7 @@ public class Main {
             System.err.println("[ERROR] Ошибка записи: " + e.getMessage());
         }
     }
-    private static HashMap<String, String> parseQueryString(String queryString){
-        HashMap<String, String> res = new HashMap<>();
-        if (queryString == null || queryString.isEmpty()) return res;
-        for (String pair : queryString.split("&")) {
-            if (pair.isEmpty()) continue;
-            String[] p = pair.split("=", 2);
-            String key = URLDecoder.decode(p[0], StandardCharsets.UTF_8);
-            String value = p.length > 1 ? URLDecoder.decode(p[1], StandardCharsets.UTF_8) : "";
-            res.put(key, value);
-        }
-        return res;
-    }
 
-    private static List<String> validateParams(Map<String, String> params) {
-        List<String> res = new ArrayList<>();
-        for (String k : new String[]{"x", "y", "r"}) {
-            if (!params.containsKey(k)) res.add("Missing parameter: " + k);
-        }
-        try {
-            double x = Double.parseDouble(params.get("x"));
-            double y = Double.parseDouble(params.get("y"));
-            double r = Double.parseDouble(params.get("r"));
-
-            if (x < -4 || x > 4) res.add("x must be in [-4; 4]");
-            if (y < -3 || y > 3) res.add("y must be in [-3; 3]");
-            if (!java.util.List.of(1.0, 1.5, 2.0, 2.5, 3.0).contains(r)) {
-                res.add("r must be one of 1, 1.5, 2, 2.5, 3");
-            }
-        } catch (NumberFormatException e) {
-            res.add("Invalid number format");
-        }
-        return res;
-    }
     private static boolean checkHit(double x, double y, double R) {
         boolean inRectangle = (x >= -R && x <= 0) && (y >= -R && y <= 0);
         boolean inTriangle = (x >= -R && x <= 0) && (y >= 0) && (y <= x / 2 + R / 2);

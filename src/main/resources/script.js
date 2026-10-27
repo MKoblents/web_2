@@ -8,6 +8,7 @@ const R = 3;
 const scale = 110;
 let NUMBER = 0;
 const API_URL = '/fcgi-bin/';
+let points = [];
 
 function toCanvasX(x){
     return centerX + x*scale;
@@ -124,9 +125,12 @@ function drawCanvas(R) {
 drawCanvas(R);
 drawAllPoints(R);
 
-async function requestCheck(x, y, r) {
-    const params = new URLSearchParams({x, y, r});
-    const response = await fetch(`${API_URL}?${params}`, {method: 'GET'});
+async function request(method, params) {
+    const options = { method, cache: 'no-store' };
+    if (method === 'POST') {
+        options.body = new URLSearchParams(params);
+    }
+    const response = await fetch(API_URL, options);
     const rawText = await response.text();
     let data;
     try {
@@ -134,31 +138,44 @@ async function requestCheck(x, y, r) {
     } catch (e) {
         throw new Error(`Сервер вернул некорректные данные. Статус: ${response.status}. Ответ: ${rawText}`);
     }
-
-    if (!response.ok || (data && data.error)) {
-        throw new Error(data.error ?? `HTTP ошибка: ${response.status}`);
+    if (!response.ok) {
+        const message = Array.isArray(data?.errors)
+            ? data.errors.join('\n')
+            : `HTTP ошибка: ${response.status}`;
+        throw new Error(message);
     }
     return data;
 }
 
 function showResult(data){
-    ctx.clearRect(0,0,width,height);
+    ctx.clearRect(0, 0, width, height);
     drawCanvas(data.r);
     drawPoint(data.x, data.y, data.isHit);
     drawAllPoints(data.r);
+    points.push(data);
     document.getElementById('results-body').appendChild(createResultRow(data));
-    saveToLocalStorage(data);
 }
 
 async function checkPoint(x,y,r){
     try {
-        showResult(await requestCheck(x,y,r))
+        showResult(await request('POST', { x, y, r }));
     } catch (error){
         console.error('Ошибка запроса:', error);
         alert(`Ошибка: ${error.message}`);
     }
 }
-
+async function loadFromServer() {
+    try {
+        const data = await request('GET');
+        points = data.results;
+        const tbody = document.getElementById('results-body');
+        tbody.innerHTML = '';
+        NUMBER = 0;
+        points.forEach(item => tbody.appendChild(createResultRow(item)));
+    } catch (error) {
+        console.error('Не удалось загрузить результаты с сервера:', error);
+    }
+}
 async function submitForm(event){
     event.preventDefault();
     clearErrors();
@@ -250,30 +267,30 @@ function drawPoint(x, y, isHit) {
     return true;
 }
 
-function saveToLocalStorage(result){
-    try{
-        const results = JSON.parse(localStorage.getItem('pointResults')|| '[]');
-        results.push(result);
-        localStorage.setItem('pointResults', JSON.stringify(results));
-    }catch (e) {
-        console.error('Ошибка при сохранении в LocalStorage:', e);
-    }
-}
-
-function loadFromLocalStorage(){
-    try {
-        const results = JSON.parse(localStorage.getItem('pointResults')|| '[]');
-        const tbody = document.getElementById('results-body');
-        tbody.innerHTML = '';
-
-        results.forEach(item =>{
-            const row = createResultRow(item);
-            tbody.appendChild(row);
-        });
-    }catch (e) {
-        console.error('Ошибка при загрузке из LocalStorage:', e);
-    }
-}
+// function saveToLocalStorage(result){
+//     try{
+//         const results = JSON.parse(localStorage.getItem('pointResults')|| '[]');
+//         results.push(result);
+//         localStorage.setItem('pointResults', JSON.stringify(results));
+//     }catch (e) {
+//         console.error('Ошибка при сохранении в LocalStorage:', e);
+//     }
+// }
+//
+// function loadFromLocalStorage(){
+//     try {
+//         const results = JSON.parse(localStorage.getItem('pointResults')|| '[]');
+//         const tbody = document.getElementById('results-body');
+//         tbody.innerHTML = '';
+//
+//         results.forEach(item =>{
+//             const row = createResultRow(item);
+//             tbody.appendChild(row);
+//         });
+//     }catch (e) {
+//         console.error('Ошибка при загрузке из LocalStorage:', e);
+//     }
+// }
 
 function createResultRow(item) {
     let n = NUMBER++;
@@ -336,16 +353,22 @@ function refreshAllTimeDisplays() {
 }
 
 
-document.getElementById('clear-btn').addEventListener('click', () => {
+document.getElementById('clear-btn').addEventListener('click', async () => {
     const tbody = document.getElementById("results-body");
     if (tbody.childElementCount === 0) {
         alert("Чтобы что-то удалить, надо это сделать сначала)");
         return;
     }
-    if (confirm('Вы уверены, что хотите удалить все результаты?')) {
-        localStorage.removeItem('pointResults');
-        document.getElementById('results-body').innerHTML = '';
+    if (!confirm('Вы уверены, что хотите удалить все результаты?')) return;
+    try {
+        await request('DELETE');
+        tbody.innerHTML = '';
         NUMBER = 0;
+        points = [];
+        ctx.clearRect(0, 0, width, height);
+        drawCanvas(parseFloat(getRadioValue('r')) || R);
+    } catch (error) {
+        alert(`Ошибка: ${error.message}`);
     }
 });
 
@@ -387,10 +410,11 @@ const form = document.getElementById('point-form');
 
 form.addEventListener('submit', submitForm );
 
-document.addEventListener('DOMContentLoaded', () => {
-    loadFromLocalStorage();
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadFromServer();
     ctx.clearRect(0, 0, width, height);
     drawCanvas(R);
+    drawAllPoints(R);
 });
 
 function getMathCoordinates(event) {
@@ -434,7 +458,6 @@ async function addClickedPointToResults(event) {
 }
 
 function drawAllPoints(r){
-    const points = JSON.parse(localStorage.getItem('pointResults') || '[]');
     const len = points.length;
     if (len===0) return;
     let i = 0

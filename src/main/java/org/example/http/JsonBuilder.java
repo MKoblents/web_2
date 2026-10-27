@@ -1,5 +1,6 @@
 package org.example.http;
 
+import org.example.models.CheckResult;
 import org.example.models.Point;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -23,5 +24,24 @@ public final class JsonBuilder {
                     .append('"');
         }
         return sb.append("]}").toString();
+    }
+    public static String item(CheckResult c) {
+        Point p = c.point();
+        return String.format(Locale.US,
+                "{\"x\": %.2f, \"y\": %.2f, \"r\": %.2f, \"isHit\": %b, \"currentTime\": \"%s\", \"executionTime\": %.3f}",
+                p.x(), p.y(), p.r(), c.hit(), c.checkedAt().truncatedTo(ChronoUnit.MILLIS), c.executionMs());
+    }
+
+    public static String list(List<CheckResult> items, double ms) {
+        StringBuilder sb = new StringBuilder("{\"results\": [");
+        for (int i = 0; i < items.size(); i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(item(items.get(i)));
+        }
+        return sb.append(String.format(Locale.US, "], \"executionTime\": %.3f}", ms)).toString();
+    }
+
+    public static String cleared(double ms) {
+        return String.format(Locale.US, "{\"cleared\": true, \"executionTime\": %.3f}", ms);
     }
 }

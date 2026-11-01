@@ -124,19 +124,38 @@ function drawCanvas(R) {
 drawCanvas(R);
 drawAllPoints(R);
 
+async function xhrGet(params){
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("GET", API_URL+"?"+params, true);
+        xhr.onload = function (){
+            if (xhr.readyState === 4){
+                if (xhr.status>=200 && xhr.status<300){
+                    resolve(xhr.responseText);
+                }else {
+                    reject(new Error(`HTTP error! status: ${xhr.status}`));
+                }
+            }
+        }
+        xhr.onerror = function() {
+            reject(new Error("Сетевая ошибка: не удалось соединиться с сервером"));
+        };
+        xhr.send();
+    })
+}
 async function requestCheck(x, y, r) {
     const params = new URLSearchParams({x, y, r});
-    const response = await fetch(`${API_URL}?${params}`, {method: 'GET'});
-    const rawText = await response.text();
+    console.log(await xhrGet(params))
+    const rawText = await xhrGet(params);
     let data;
     try {
         data = JSON.parse(rawText);
     } catch (e) {
-        throw new Error(`Сервер вернул некорректные данные. Статус: ${response.status}. Ответ: ${rawText}`);
+        throw new Error(`Сервер вернул некорректные данные. Ответ: ${rawText}`);
     }
 
-    if (!response.ok || (data && data.error)) {
-        throw new Error(data.error ?? `HTTP ошибка: ${response.status}`);
+    if (data && data.error) {
+        throw new Error(data.error);
     }
     return data;
 }

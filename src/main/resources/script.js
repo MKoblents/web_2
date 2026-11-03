@@ -124,21 +124,14 @@ function drawCanvas(R) {
 drawCanvas(R);
 drawAllPoints(R);
 
-async function requestCheck(x, y, r) {
-    const params = new URLSearchParams({x, y, r});
-    const response = await fetch(`${API_URL}?${params}`, {method: 'GET'});
-    const rawText = await response.text();
-    let data;
-    try {
-        data = JSON.parse(rawText);
-    } catch (e) {
-        throw new Error(`Сервер вернул некорректные данные. Статус: ${response.status}. Ответ: ${rawText}`);
-    }
 
-    if (!response.ok || (data && data.error)) {
-        throw new Error(data.error ?? `HTTP ошибка: ${response.status}`);
-    }
-    return data;
+async function requestCheck(x, y, r) {
+    return $.ajax({
+        url: API_URL,
+        method: "GET",
+        data: {x: x, y: y, r: r},
+        dataType: "json"
+    });
 }
 
 function showResult(data){

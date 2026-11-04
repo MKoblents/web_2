@@ -80,3 +80,7 @@ Thumbs.db
 
 .env
 qodana.yaml
+
+node_modules
+package.json
+package-lock.json

@@ -125,20 +125,10 @@ drawCanvas(R);
 drawAllPoints(R);
 
 async function requestCheck(x, y, r) {
-    const params = new URLSearchParams({x, y, r});
-    const response = await fetch(`${API_URL}?${params}`, {method: 'GET'});
-    const rawText = await response.text();
-    let data;
-    try {
-        data = JSON.parse(rawText);
-    } catch (e) {
-        throw new Error(`Сервер вернул некорректные данные. Статус: ${response.status}. Ответ: ${rawText}`);
-    }
-
-    if (!response.ok || (data && data.error)) {
-        throw new Error(data.error ?? `HTTP ошибка: ${response.status}`);
-    }
-    return data;
+    return $.get({url: API_URL,
+        data: {x:x,y:y,r:r},
+        dataType: "json"
+    });
 }
 
 function showResult(data){
